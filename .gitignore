@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+.DS_Store
+# 真实 Token 永不入库; nutrition.json 为公开营养数据快照, 可入库
+*.local.json

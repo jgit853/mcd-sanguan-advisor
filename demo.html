@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麦门三高参谋 · 演示页</title>
+<style>
+  :root{--red:#d52b1e;--yellow:#ffc72c;--ink:#27251f;--bg:#fff8e7;--card:#ffffff;--line:#f0e2bb;--ok:#2e7d32;--warn:#c62828}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);padding:16px;max-width:720px;margin:0 auto}
+  header{text-align:center;padding:18px 0 8px}
+  h1{color:var(--red);font-size:28px;letter-spacing:1px}
+  .sub{color:#6d5c2e;margin-top:6px;font-size:14px}
+  .badge{display:inline-block;margin-top:10px;padding:3px 10px;border-radius:20px;background:#fff3cd;border:1px solid var(--yellow);font-size:12px;color:#7a5b00}
+  .badge.official{background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+  .panel h2{font-size:16px;margin-bottom:10px}
+  .profiles{display:flex;gap:8px;flex-wrap:wrap}
+  .profiles button{flex:1;min-width:70px;padding:10px 4px;border-radius:10px;border:2px solid var(--line);background:#fff;font-size:14px;cursor:pointer}
+  .profiles button.on{border-color:var(--red);background:#fdecea;color:var(--red);font-weight:700}
+  .budgetrow{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:14px}
+  input[type=range]{flex:1;accent-color:var(--red)}
+  .combo{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px}
+  .combo .names{font-weight:700;font-size:16px}
+  .combo .nums{margin-top:6px;font-size:13px;color:#555;line-height:1.7}
+  .combo .nums b{color:var(--ink)}
+  .meter{height:10px;background:#f3ead0;border-radius:6px;margin-top:8px;overflow:hidden}
+  .meter i{display:block;height:100%;background:var(--yellow);border-radius:6px}
+  .meter i.hot{background:var(--warn)}
+  .meterlbl{font-size:12px;color:#777;margin-top:4px}
+  select,input[type=text]{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:#fff}
+  .swapres{margin-top:10px;font-size:14px;line-height:1.8}
+  .swapres .save{color:var(--ok);font-weight:700}
+  footer{margin:18px 0 8px;font-size:12px;color:#888;line-height:1.7;text-align:center}
+  .empty{color:#999;font-size:14px;padding:8px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>🍔 麦门三高参谋</h1>
+  <div class="sub">血压 / 血糖 / 血脂敏感，也能把一顿麦当劳的钠、糖、脂肪算清楚</div>
+  <div><span class="badge" id="srcBadge">示例数据演示 · 非官方实时数据</span></div>
+</header>
+
+<div class="panel">
+  <h2>① 选你的画像</h2>
+  <div class="profiles" id="profiles"></div>
+  <div class="budgetrow"><span>预算</span><input type="range" id="budget" min="25" max="80" step="1" value="45"><b id="budgetVal">¥45</b></div>
+</div>
+
+<div class="panel">
+  <h2>② 参谋给你的 Top3 组合</h2>
+  <div id="results"></div>
+</div>
+
+<div class="panel">
+  <h2>③ 就想吃这个？换个低钠的</h2>
+  <select id="swapSel"></select>
+  <div class="swapres" id="swapRes"></div>
+</div>
+
+<footer>
+  本页为参赛演示：只做营养数据核算，不构成医疗或营养专业建议；餐品与价格以麦当劳官方实时数据为准。有基础疾病请以医生指导为准。<br>
+  mcd-sanguan-advisor · 使用麦当劳中国官方 MCP 数据（演示页内置示例数据，接通后自动切换官方快照）
+</footer>
+
+<script>
+var SAMPLE = [
+  {name:"巨无霸",cat:"main",price:24.5,kcal:530,protein:25,fat:26,carbs:44,sodium:1010,sugar:9,fried:false},
+  {name:"板烧鸡腿堡",cat:"main",price:22.5,kcal:400,protein:26,fat:13,carbs:42,sodium:890,sugar:7,fried:false},
+  {name:"麦香鸡",cat:"main",price:13.5,kcal:400,protein:17,fat:19,carbs:40,sodium:790,sugar:5,fried:true},
+  {name:"双层吉士汉堡",cat:"main",price:19.0,kcal:440,protein:25,fat:24,carbs:34,sodium:980,sugar:7,fried:false},
+  {name:"麦辣鸡腿堡",cat:"main",price:21.0,kcal:530,protein:24,fat:25,carbs:51,sodium:1240,sugar:6,fried:true},
+  {name:"吉士汉堡包",cat:"main",price:12.5,kcal:300,protein:15,fat:12,carbs:33,sodium:680,sugar:6,fried:false},
+  {name:"中薯条",cat:"side",price:13.0,kcal:330,protein:4,fat:16,carbs:42,sodium:260,sugar:0,fried:true},
+  {name:"玉米杯",cat:"side",price:9.0,kcal:110,protein:3,fat:2,carbs:20,sodium:15,sugar:4,fried:false},
+  {name:"苹果派",cat:"side",price:9.5,kcal:230,protein:2,fat:11,carbs:31,sodium:170,sugar:12,fried:true},
+  {name:"麦乐鸡5块",cat:"side",price:14.0,kcal:220,protein:13,fat:12,carbs:15,sodium:540,sugar:0,fried:true},
+  {name:"田园沙拉(不加酱)",cat:"side",price:12.0,kcal:60,protein:3,fat:1,carbs:9,sodium:60,sugar:4,fried:false},
+  {name:"可口可乐中杯",cat:"drink",price:11.0,kcal:147,protein:0,fat:0,carbs:39,sodium:10,sugar:39,fried:false},
+  {name:"无糖可乐中杯",cat:"drink",price:11.0,kcal:1,protein:0,fat:0,carbs:0,sodium:15,sugar:0,fried:false},
+  {name:"纯牛奶",cat:"drink",price:12.0,kcal:130,protein:6,fat:5,carbs:15,sodium:90,sugar:13,fried:false},
+  {name:"美式咖啡",cat:"drink",price:13.0,kcal:10,protein:0,fat:0,carbs:2,sodium:5,sugar:0,fried:false},
+  {name:"锡兰红茶(无糖)",cat:"drink",price:12.0,kcal:5,protein:0,fat:0,carbs:1,sodium:5,sugar:0,fried:false}
+];
+var PROFILES = {
+  sodium:{label:"控钠 · 血压关注",sodium_max:800,sugar_max:null,fat_max:null,kcal_max:900,avoid_fried:false},
+  sugar:{label:"控糖 · 血糖关注",sodium_max:null,sugar_max:25,fat_max:null,kcal_max:900,avoid_fried:false},
+  fat:{label:"控脂 · 血脂关注",sodium_max:null,sugar_max:null,fat_max:22,kcal_max:800,avoid_fried:true},
+  all:{label:"三高综合",sodium_max:800,sugar_max:25,fat_max:25,kcal_max:850,avoid_fried:false}
+};
+var ITEMS = SAMPLE, cur = "all";
+
+function tot(c){var t={price:0,kcal:0,protein:0,fat:0,carbs:0,sodium:0,sugar:0};c.forEach(function(i){for(var k in t)t[k]+=i[k];});for(var k in t)t[k]=Math.round(t[k]*10)/10;return t;}
+function ok(t,p,budget){
+  if(budget!=null && t.price>budget)return false;
+  if(p.sodium_max!=null && t.sodium>p.sodium_max)return false;
+  if(p.sugar_max!=null && t.sugar>p.sugar_max)return false;
+  if(p.fat_max!=null && t.fat>p.fat_max)return false;
+  if(p.kcal_max!=null && t.kcal>p.kcal_max)return false;
+  return true;
+}
+function solve(){
+  var p=PROFILES[cur], budget=parseFloat(document.getElementById("budget").value);
+  var mains=ITEMS.filter(i=>i.cat==="main"), sides=ITEMS.filter(i=>i.cat==="side"), drinks=ITEMS.filter(i=>i.cat==="drink");
+  var res=[];
+  mains.forEach(m=>sides.forEach(s=>drinks.forEach(d=>{
+    var c=[m,s,d]; if(p.avoid_fried && c.some(i=>i.fried))return;
+    var t=tot(c); if(ok(t,p,budget))res.push({items:c.map(i=>i.name),t:t});
+  })));
+  res.sort((a,b)=>a.t.sodium-b.t.sodium || b.t.protein-a.t.protein || a.t.price-b.t.price);
+  return res.slice(0,3);
+}
+function render(){
+  document.getElementById("budgetVal").textContent="¥"+document.getElementById("budget").value;
+  var p=PROFILES[cur], cap=p.sodium_max||800, box=document.getElementById("results"), res=solve();
+  if(!res.length){box.innerHTML='<div class="empty">这个预算内没有满足约束的组合，试着把预算拉高一点。</div>';}
+  else box.innerHTML=res.map(function(e,i){
+    var pct=Math.min(100,Math.round(e.t.sodium/cap*100));
+    return '<div class="combo"><div class="names">'+(i+1)+'. '+e.items.join(" + ")+'</div>'+
+    '<div class="nums">总价 <b>¥'+e.t.price+'</b> · 热量 <b>'+e.t.kcal+' kcal</b> · 钠 <b>'+e.t.sodium+' mg</b> · 糖 <b>'+e.t.sugar+' g</b> · 脂肪 <b>'+e.t.fat+' g</b> · 蛋白 <b>'+e.t.protein+' g</b></div>'+
+    '<div class="meter"><i style="width:'+pct+'%" class="'+(pct>85?"hot":"")+'"></i></div>'+
+    '<div class="meterlbl">钠占本画像上限（'+cap+'mg）的 '+pct+'%</div></div>';
+  }).join("");
+  renderSwap();
+}
+function renderSwap(){
+  var name=document.getElementById("swapSel").value, box=document.getElementById("swapRes");
+  var target=ITEMS.find(i=>i.name===name); if(!target){box.innerHTML="";return;}
+  var alts=ITEMS.filter(i=>i.cat===target.cat && i.name!==name && i.sodium<target.sodium).sort((a,b)=>a.sodium-b.sodium).slice(0,3);
+  if(!alts.length){box.innerHTML="「"+name+"」已经是同类里钠最低的了 👍";return;}
+  box.innerHTML="「"+name+"」钠 <b>"+target.sodium+"mg</b>。换成下面任一：<br>"+alts.map(function(a){
+    var d=target.sodium-a.sodium, pct=Math.round(d/target.sodium*1000)/10;
+    return "· <b>"+a.name+"</b>（钠 "+a.sodium+"mg）→ <span class='save'>少 "+d+"mg（-"+pct+"%）</span>，"+a.kcal+"kcal，¥"+a.price;
+  }).join("<br>");
+}
+var profBox=document.getElementById("profiles");
+Object.keys(PROFILES).forEach(function(k){
+  var b=document.createElement("button"); b.textContent=PROFILES[k].label; if(k===cur)b.className="on";
+  b.onclick=function(){cur=k; profBox.querySelectorAll("button").forEach(x=>x.className=""); b.className="on"; render();};
+  profBox.appendChild(b);
+});
+var sel=document.getElementById("swapSel");
+function fillSel(){ sel.innerHTML=ITEMS.map(i=>'<option'+(i.name==="麦辣鸡腿堡"?" selected":"")+'>'+i.name+'</option>').join(""); }
+fillSel();
+document.getElementById("budget").oninput=render;
+sel.onchange=renderSwap;
+render();
+fetch("data/nutrition.json").then(r=>{if(!r.ok)throw 0;return r.json();}).then(function(d){
+  if(d && d.items && d.items.length){ ITEMS=d.items; var b=document.getElementById("srcBadge");
+    b.textContent="官方数据 · 快照 "+(d.snapshot_date||""); b.className="badge official"; fillSel(); render(); }
+}).catch(function(){});
+</script>
+</body>
+</html>

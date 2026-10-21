@@ -1,0 +1,1 @@
+{"mcpServers":{"mcd-mcp":{"headers":{"Authorization":"Bearer ${MCD_MCP_TOKEN}"},"type":"streamableHttp","url":"https://mcp.mcd.cn/mcp"}}}
